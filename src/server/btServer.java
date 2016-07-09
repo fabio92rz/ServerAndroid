@@ -3,46 +3,44 @@ package server;
 /**
  * Created by Fabio on 08/07/2016.
  */
-import javax.swing.*;
+import com.mysql.jdbc.ResultSet;
+import database.ConnessioneDatabase;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 
 
-public class prova extends Thread {
+public class btServer extends Thread {
 
-    public static final int SERVERPORT = 4444;
-    // while this is true the server will run
+    public static final int SERVERPORT = 8080;
     private boolean running = false;
-    // used to send messages
     private PrintWriter bufferSender;
-    // callback used to notify new messages received
     private OnMessageReceived messageListener;
     private ServerSocket serverSocket;
     private Socket client;
+    private ArrayList<String> user = new ArrayList<>();
+    private boolean login = false;
 
-    /**
-     * Constructor of the class
-     *
-     * @param messageListener listens for the messages
-     */
-    public prova(OnMessageReceived messageListener) {
+    public btServer(OnMessageReceived messageListener) {
+
         this.messageListener = messageListener;
     }
 
     public static void main(String[] args) {
 
-        //opens the window where the messages will be received and sent
-        MainScreen frame = new MainScreen();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
-        frame.setVisible(true);
+        btServer mprova = new btServer(new OnMessageReceived() {
+            @Override
+            public void messageReceived(String message) {
 
+            }
+        });
+
+        mprova.start();
     }
 
-    /**
-     * Close the server
-     */
+
     public void close() {
 
         running = false;
@@ -66,11 +64,7 @@ public class prova extends Thread {
 
     }
 
-    /**
-     * Method to send the messages from server to client
-     *
-     * @param message the message sent by the server
-     */
+
     public void sendMessage(String message) {
         if (bufferSender != null && !bufferSender.checkError()) {
             bufferSender.println(message);
@@ -82,7 +76,7 @@ public class prova extends Thread {
         if (message != null) {
             if (message.contains(Constants.CLOSED_CONNECTION)) {
                 messageListener.messageReceived(message.replaceAll(Constants.CLOSED_CONNECTION, "") + " disconnected from room.");
-                // close the server connection if we have this command and rebuild a new one
+
                 close();
                 runServer();
                 return true;
@@ -95,34 +89,66 @@ public class prova extends Thread {
         return false;
     }
 
-    /**
-     * Builds a new server connection
-     */
+
     private void runServer() {
         running = true;
 
         try {
             System.out.println("S: Connecting...");
 
-            //create a server socket. A server socket waits for requests to come in over the network.
             serverSocket = new ServerSocket(SERVERPORT);
-
-            //create client socket... the method accept() listens for a connection to be made to this socket and accepts it.
             client = serverSocket.accept();
 
             System.out.println("S: Receiving...");
 
             try {
 
-                //sends the message to the client
                 bufferSender = new PrintWriter(new BufferedWriter(new OutputStreamWriter(client.getOutputStream())), true);
-
-                //read the message received from client
                 BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
-                //in this while we wait to receive messages from client (it's an infinite loop)
-                //this while it's like a listener for messages
                 while (running) {
+
+                    String username = in.readLine();
+                    String password = in.readLine();
+
+                    if (username != null && password != null){
+
+                        ConnessioneDatabase.Connetti();
+                        String query = "SELECT * FROM users WHERE email = " + username + " AND password = " + password;
+                        ConnessioneDatabase.cmd.executeQuery(query);
+
+                        ResultSet rs = (ResultSet) ConnessioneDatabase.cmd.getResultSet();
+
+                        int dbId = 0;
+                        String dbEmail = "";
+                        String dbPassword = "";
+                        String dbName = "";
+                        String dbSurname = "";
+                        String dbProfPic = "";
+
+                        while (rs.next()) {
+
+                            dbId = rs.getInt("id");
+                            dbEmail = rs.getString("email");
+                            dbPassword = rs.getString("password");
+                            dbName = rs.getString("name");
+                            dbSurname = rs.getString("surname");
+                            dbProfPic = rs.getString("profile_picture");
+
+                            if (dbPassword.equals(password)) {
+                                login = true;
+                            }
+                        }
+
+                        user.add(dbName);
+                        user.add(dbEmail);
+                        user.add(dbSurname);
+                        user.add(dbProfPic);
+                        user.add(String.valueOf(dbId));
+                    }
+
+                    ObjectOutputStream outputStream = new ObjectOutputStream(client.getOutputStream());
+                    outputStream.writeObject(login);
 
                     String message = null;
                     try {
@@ -136,7 +162,6 @@ public class prova extends Thread {
                     }
 
                     if (message != null && messageListener != null) {
-                        //call the method messageReceived from ServerBoard class
                         messageListener.messageReceived(message);
                     }
                 }
@@ -160,10 +185,8 @@ public class prova extends Thread {
 
     }
 
-    //Declare the interface. The method messageReceived(String message) will must be implemented in the ServerBoard
-    //class at on startServer button click
     public interface OnMessageReceived {
-        public void messageReceived(String message);
+        void messageReceived(String message);
     }
 
 }
