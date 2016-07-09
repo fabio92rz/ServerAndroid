@@ -3,14 +3,13 @@ package server;
 /**
  * Created by Fabio on 08/07/2016.
  */
+
 import com.mysql.jdbc.ResultSet;
 import database.ConnessioneDatabase;
-
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-
 
 public class btServer extends Thread {
 
@@ -34,12 +33,12 @@ public class btServer extends Thread {
             @Override
             public void messageReceived(String message) {
 
+
             }
         });
 
         mprova.start();
     }
-
 
     public void close() {
 
@@ -61,9 +60,7 @@ public class btServer extends Thread {
         System.out.println("S: Done.");
         serverSocket = null;
         client = null;
-
     }
-
 
     public void sendMessage(String message) {
         if (bufferSender != null && !bufferSender.checkError()) {
@@ -71,24 +68,6 @@ public class btServer extends Thread {
             bufferSender.flush();
         }
     }
-
-    public boolean hasCommand(String message) {
-        if (message != null) {
-            if (message.contains(Constants.CLOSED_CONNECTION)) {
-                messageListener.messageReceived(message.replaceAll(Constants.CLOSED_CONNECTION, "") + " disconnected from room.");
-
-                close();
-                runServer();
-                return true;
-            } else if (message.contains(Constants.LOGIN_NAME)) {
-                messageListener.messageReceived(message.replaceAll(Constants.LOGIN_NAME, "") + " connected to room.");
-                return true;
-            }
-        }
-
-        return false;
-    }
-
 
     private void runServer() {
         running = true;
@@ -98,7 +77,6 @@ public class btServer extends Thread {
 
             serverSocket = new ServerSocket(SERVERPORT);
             client = serverSocket.accept();
-
             System.out.println("S: Receiving...");
 
             try {
@@ -111,7 +89,7 @@ public class btServer extends Thread {
                     String username = in.readLine();
                     String password = in.readLine();
 
-                    if (username != null && password != null){
+                    if (username != null && password != null) {
 
                         ConnessioneDatabase.Connetti();
                         String query = "SELECT * FROM users WHERE email = " + username + " AND password = " + password;
@@ -135,7 +113,7 @@ public class btServer extends Thread {
                             dbSurname = rs.getString("surname");
                             dbProfPic = rs.getString("profile_picture");
 
-                            if (dbPassword.equals(password)) {
+                            if (dbEmail.equals(username) && dbPassword.equals(password)) {
                                 login = true;
                             }
                         }
@@ -144,21 +122,18 @@ public class btServer extends Thread {
                         user.add(dbEmail);
                         user.add(dbSurname);
                         user.add(dbProfPic);
+                        user.add(dbPassword);
                         user.add(String.valueOf(dbId));
                     }
 
                     ObjectOutputStream outputStream = new ObjectOutputStream(client.getOutputStream());
-                    outputStream.writeObject(login);
+                    outputStream.write(login ? 1:0);
 
                     String message = null;
                     try {
                         message = in.readLine();
                     } catch (IOException e) {
                         System.out.println("Error reading message: " + e.getMessage());
-                    }
-
-                    if (hasCommand(message)) {
-                        continue;
                     }
 
                     if (message != null && messageListener != null) {
@@ -182,11 +157,9 @@ public class btServer extends Thread {
         super.run();
 
         runServer();
-
     }
 
     public interface OnMessageReceived {
         void messageReceived(String message);
     }
-
 }
