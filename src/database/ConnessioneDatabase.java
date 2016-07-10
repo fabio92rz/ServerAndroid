@@ -10,7 +10,7 @@ public class ConnessioneDatabase {
     static String user_name = "root";
     static String user_pass = "emperor92";
     static String driver = "com.mysql.jdbc.Driver";
-    static String url = "jdbc:mysql://95.85.23.84/";
+    static String url = "jdbc:mysql://localhost/";
 
     public static void Connetti() {
         try {
