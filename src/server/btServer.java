@@ -92,7 +92,7 @@ public class btServer extends Thread {
                     if (username != null && password != null) {
 
                         ConnessioneDatabase.Connetti();
-                        String query = "SELECT * FROM `user` WHERE `email` =" + username + "AND `password` = " + password;
+                        String query = "SELECT * FROM users WHERE email ='" + username + "' AND password = '" + password +"'";
 
                         ConnessioneDatabase.cmd.executeQuery(query);
 
