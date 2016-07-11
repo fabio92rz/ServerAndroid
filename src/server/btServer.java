@@ -6,6 +6,8 @@ package server;
 
 import com.mysql.jdbc.ResultSet;
 import database.ConnessioneDatabase;
+
+import javax.swing.plaf.basic.BasicFormattedTextFieldUI;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -16,32 +18,18 @@ public class btServer extends Thread {
     public static final int SERVERPORT = 8080;
     private boolean running = false;
     private PrintWriter bufferSender;
-    private OnMessageReceived messageListener;
     private ServerSocket serverSocket;
     private Socket client;
     private ArrayList<String> user = new ArrayList<>();
     private boolean login = false;
 
-    public btServer(OnMessageReceived messageListener) {
+    public btServer() {
 
-        this.messageListener = messageListener;
-    }
+        btServer prova = btServer.this;
 
-    public static void main(String[] args) {
-
-        btServer mprova = new btServer(new OnMessageReceived() {
-            @Override
-            public void messageReceived(String message) {
-
-
-            }
-        });
-
-        mprova.start();
     }
 
     public void close() {
-
         running = false;
 
         if (bufferSender != null) {
@@ -73,16 +61,16 @@ public class btServer extends Thread {
         running = true;
 
         try {
-            System.out.println("S: Connecting...");
 
+            System.out.println("S: Connecting...");
             serverSocket = new ServerSocket(SERVERPORT);
             client = serverSocket.accept();
             System.out.println("S: Receiving...");
 
             try {
 
-                bufferSender = new PrintWriter(new BufferedWriter(new OutputStreamWriter(client.getOutputStream())), true);
                 BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                bufferSender = new PrintWriter(new BufferedWriter(new OutputStreamWriter(client.getOutputStream())), true);
 
                 while (running) {
 
@@ -118,7 +106,6 @@ public class btServer extends Thread {
                                 login = true;
                             }
                         }
-
                         user.add(dbName);
                         user.add(dbEmail);
                         user.add(dbSurname);
@@ -127,19 +114,7 @@ public class btServer extends Thread {
                         user.add(String.valueOf(dbId));
                     }
 
-                    ObjectOutputStream outputStream = new ObjectOutputStream(client.getOutputStream());
-                    outputStream.write(login ? 1:0);
-
-                    String message = null;
-                    try {
-                        message = in.readLine();
-                    } catch (IOException e) {
-                        System.out.println("Error reading message: " + e.getMessage());
-                    }
-
-                    if (message != null && messageListener != null) {
-                        messageListener.messageReceived(message);
-                    }
+                    bufferSender.write(login? 1:0);
                 }
 
             } catch (Exception e) {
@@ -156,11 +131,14 @@ public class btServer extends Thread {
     @Override
     public void run() {
         super.run();
-
         runServer();
     }
 
-    public interface OnMessageReceived {
-        void messageReceived(String message);
+    public static void main(String[] args) {
+
+        btServer mprova = new btServer();
+
+        mprova.run();
+        mprova.start();
     }
 }
