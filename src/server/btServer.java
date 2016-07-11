@@ -21,13 +21,7 @@ public class btServer extends Thread {
     private ServerSocket serverSocket;
     private Socket client;
     private ArrayList<String> user = new ArrayList<>();
-    private boolean login = false;
 
-    public btServer() {
-
-        btServer prova = btServer.this;
-
-    }
 
     public void close() {
         running = false;
@@ -64,69 +58,79 @@ public class btServer extends Thread {
 
             System.out.println("S: Connecting...");
             serverSocket = new ServerSocket(SERVERPORT);
-            client = serverSocket.accept();
-            System.out.println("S: Receiving...");
+            while ((client = serverSocket.accept()) != null) {
 
-            try {
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                bufferSender = new PrintWriter(new BufferedWriter(new OutputStreamWriter(client.getOutputStream())), true);
+                System.out.println("S: Receiving...");
 
-                while (running) {
+                try {
 
-                    String username = in.readLine();
-                    String password = in.readLine();
+                    BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                    bufferSender = new PrintWriter(new BufferedWriter(new OutputStreamWriter(client.getOutputStream())), true);
 
-                    if (username != null && password != null) {
+                        boolean login = false;
 
-                        ConnessioneDatabase.Connetti();
-                        String query = "SELECT * FROM users WHERE email ='" + username + "' AND password = '" + password +"'";
+                        String username = in.readLine();
+                        String password = in.readLine();
 
-                        ConnessioneDatabase.cmd.executeQuery(query);
+                        if (username != null && username.length() > 0 && password != null && password.length() > 0) {
 
-                        ResultSet rs = (ResultSet) ConnessioneDatabase.cmd.getResultSet();
+                            ConnessioneDatabase.Connetti();
+                            String query = "SELECT * FROM users WHERE email ='" + username + "' AND password = '" + password + "'";
 
-                        int dbId = 0;
-                        String dbEmail = "";
-                        String dbPassword = "";
-                        String dbName = "";
-                        String dbSurname = "";
-                        String dbProfPic = "";
+                            ConnessioneDatabase.cmd.executeQuery(query);
 
-                        while (rs.next()) {
+                            ResultSet rs = (ResultSet) ConnessioneDatabase.cmd.getResultSet();
 
-                            dbId = rs.getInt("id");
-                            dbEmail = rs.getString("email");
-                            dbPassword = rs.getString("password");
-                            dbName = rs.getString("name");
-                            dbSurname = rs.getString("surname");
-                            dbProfPic = rs.getString("profile_picture");
+                            int dbId = 0;
+                            String dbEmail = "";
+                            String dbPassword = "";
+                            String dbName = "";
+                            String dbSurname = "";
+                            String dbProfPic = "";
 
-                            if (dbEmail.equals(username) && dbPassword.equals(password)) {
-                                login = true;
+                            while (rs.next()) {
+
+                                dbId = rs.getInt("id");
+                                dbEmail = rs.getString("email");
+                                dbPassword = rs.getString("password");
+                                dbName = rs.getString("name");
+                                dbSurname = rs.getString("surname");
+                                dbProfPic = rs.getString("profile_picture");
+
+                                if (dbEmail.equals(username) && dbPassword.equals(password)) {
+                                    login = true;
+                                }
                             }
+                            user.add(dbName);
+                            user.add(dbEmail);
+                            user.add(dbSurname);
+                            user.add(dbProfPic);
+                            user.add(dbPassword);
+                            user.add(String.valueOf(dbId));
                         }
-                        user.add(dbName);
-                        user.add(dbEmail);
-                        user.add(dbSurname);
-                        user.add(dbProfPic);
-                        user.add(dbPassword);
-                        user.add(String.valueOf(dbId));
+
+                        bufferSender.println(login ? 1 : 0);
+                        System.out.println("S: Successful");
+
+                } catch (Exception e) {
+                    System.out.println("S: Error");
+                    e.printStackTrace();
+
+                    if (client != null){
+                        client.close();
                     }
 
-                    bufferSender.write(login? 1:0);
                 }
 
-            } catch (Exception e) {
-                System.out.println("S: Error");
-                e.printStackTrace();
             }
-
         } catch (Exception e) {
             System.out.println("S: Error");
             e.printStackTrace();
         }
+
     }
+
 
     @Override
     public void run() {
